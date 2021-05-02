@@ -12,11 +12,11 @@
         "php": ">= 7.4",
         "ext-pdo": "*",
 		"ext-json": "*",
-        "nette/neon": "^3.2",
-        "rkr/php-mysql-query-builder": "^0.3.1",
-        "logger/essentials": "^0.2.0"
+		"ext-mbstring": "*",
+        "rkr/php-mysql-query-builder": "^0.3.1"
     },
     "require-dev": {
+        "logger/essentials": "^0.2.0",
         "phpunit/phpunit": "^9.5",
         "phpstan/phpstan": ">= 0.1"
 	},

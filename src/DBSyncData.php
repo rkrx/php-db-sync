@@ -18,7 +18,7 @@ class DBSyncData {
 	 * @param DBEngine $sourceDBEngine
 	 * @param DBEngine $destDBEngine
 	 */
-	public function syncTwoTablesInDifferentLocations(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine): void {
+	public function syncTwoTablesFromDifferentConnections(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine): void {
 		try {
 			$destDBEngine->getPDO()->exec('SET FOREIGN_KEY_CHECKS=0');
 
