@@ -2,6 +2,7 @@
 namespace Kir\DBSync\DBEngines\MariaDBEngine;
 
 use Generator;
+use Kir\DBSync\Common\Json;
 use Kir\DBSync\DBDataProvider;
 use Kir\DBSync\DBEngines\MariaDBEngine;
 use Kir\DBSync\DBTable;
@@ -95,14 +96,43 @@ class MariaDBDataProvider implements DBDataProvider {
 			return [];
 		}
 
+		$dbFields = [];
+		$mapping = [];
+		foreach(array_values($keyFields) as $idx => $field) {
+			$fieldKey = "k{$idx}";
+			$dbFields[$fieldKey] = $this->dbEngine->quoteFieldName($field, 'a');
+			$mapping[$field] = $fieldKey;
+		}
+
+		$params = [];
+		foreach($valueFields as $fieldName) {
+			$params[] = $this->dbEngine->quoteValue($fieldName);
+			$params[] = $this->dbEngine->quoteFieldName($fieldName, 'a');
+		}
+
+		$hash = sprintf('MD5(JSON_OBJECT(%s))', implode(', ', $params));
+		$dbFields['v'] = $hash;
+
 		$select = $this->dbEngine->getDB()->getDB()->select()
-		->fields($fieldSpec->getDBFields())
+		->fields($dbFields)
 		->from('a', $tableName)
 		->where(implode("\n\tOR\n", $conditionList));
 
 		$select->setPreserveTypes();
 
-		return $fieldSpec->translateFields($select->fetchRowsLazy());
+		$result = [];
+		foreach($select->fetchRows() as $row) {
+			$keyValues = [];
+			foreach($keyFields as $keyField) {
+				$keyValues[$keyField] = $row[$mapping[$keyField]];
+			}
+			$key = Json::encode($keyValues);
+			$result[$key] = [
+				'hash' => $row['v'],
+				'keys' => $keyValues
+			];
+		}
+		return $result;
 	}
 
 	/**
