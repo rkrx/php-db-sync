@@ -55,3 +55,15 @@ function scalarOrNull($value) {
 	}
 	return null;
 }
+
+/**
+ * @param string $input
+ * @param int $maxLength
+ * @return string
+ */
+function str_truncate(string $input, int $maxLength): string {
+	if(mb_strlen($input, 'UTF-8') > $maxLength) {
+		return mb_substr($input, 0, $maxLength - 4, 'UTF-8') . ' ...';
+	}
+	return $input;
+}
