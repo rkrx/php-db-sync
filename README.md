@@ -7,6 +7,7 @@
 * Every table in the database must have a primary key.
 * Detection of new or missing rows in the destination database is based in primary-keys.
 * Detection of changed rows is made by a some Hashing-Algorithm where all values of columns outside a primary key form a hash.
+* Datasets will be synchronized in chunks, so the vertical size of a table should not matter.
 
 ## Quick-Start
 
