@@ -16,6 +16,9 @@ class MariaDBEngine implements DBEngine {
 	private MySQL $mysql;
 	private Cache $cache;
 
+	/**
+	 * @param PDOWrapper $db
+	 */
 	public function __construct(PDOWrapper $db) {
 		$this->db = $db;
 		$this->mysql = new MySQL($db->getPDO());
@@ -25,18 +28,30 @@ class MariaDBEngine implements DBEngine {
 		}
 	}
 
+	/**
+	 * @return PDO
+	 */
 	public function getPDO(): PDO {
 		return $this->db->getPDO();
 	}
 
+	/**
+	 * @return RunnableSelect
+	 */
 	public function select(): RunnableSelect {
 		return $this->mysql->select();
 	}
 
+	/**
+	 * @return MariaDBTableProvider
+	 */
 	public function getTableProvider(): MariaDBTableProvider {
 		return $this->cache->getOr('table-provider', fn() => new MariaDBTableProvider($this->db));
 	}
 
+	/**
+	 * @return MariaDBDataProvider
+	 */
 	public function getDataProvider(): MariaDBDataProvider {
 		return $this->cache->getOr('data-provider', fn() => new MariaDBDataProvider($this));
 	}
