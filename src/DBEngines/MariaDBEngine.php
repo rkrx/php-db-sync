@@ -1,6 +1,7 @@
 <?php
 namespace Kir\DBSync\DBEngines;
 
+use Kir\DBSync\Common\Cache;
 use Kir\DBSync\DBTable;
 use Kir\DBSync\PDOWrapper;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBDataProvider;
@@ -12,10 +13,12 @@ use RuntimeException;
 class MariaDBEngine implements DBEngine {
 	private PDOWrapper $db;
 	private MySQL $mysql;
+	private Cache $cache;
 
 	public function __construct(PDOWrapper $db) {
 		$this->db = $db;
 		$this->mysql = new MySQL($db->getPDO());
+		$this->cache = new Cache();
 		if(!version_compare($this->getVersion(), '10.2.3', '>=')) {
 			throw new RuntimeException('Min MariaDB-Version of 10.2.3 required');
 		}
@@ -30,11 +33,11 @@ class MariaDBEngine implements DBEngine {
 	}
 
 	public function getTableProvider(): MariaDBTableProvider {
-		return new MariaDBTableProvider($this->db);
+		return $this->cache->getOr('table-provider', fn() => new MariaDBTableProvider($this->db));
 	}
 
 	public function getDataProvider(): MariaDBDataProvider {
-		return new MariaDBDataProvider($this);
+		return $this->cache->getOr('data-provider', fn() => new MariaDBDataProvider($this));
 	}
 
 	/**

@@ -28,7 +28,7 @@ class DBSyncData {
 		$limit = 1000;
 		do {
 			if($offset !== null) {
-				$this->logger->info(sprintf("%s / Offset: %s\n", $table->name, json_encode($offset, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)));
+				$this->logger->info(sprintf("%s / Offset: %s", $table->name, json_encode($offset, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)));
 			}
 
 			$maxKey = DBTools::findNearstUpperBoundWithMaxNRows($sourceDataProvider, $destDataProvider, $table->name, $keyFields, $limit, $offset);
@@ -48,17 +48,17 @@ class DBSyncData {
 			$equalKeys = array_values(array_intersect_key($sourceCompareKeys, $destCompareKeys));
 
 			foreach($sourceMissing as $row) {
-				$this->logger->info(sprintf("%s / Remove from dest: %s\n", $table->name, Json::encode($row)));
+				$this->logger->info(sprintf("%s / Remove from dest: %s", $table->name, Json::encode($row)));
 				$destDBEngine->deleteRow($table, $row);
 			}
 
 			$dataRows = $sourceDataProvider->getKeyAndValueColumnsLazy($table, array_values($destMissing));
 			foreach($dataRows as $dataRow) {
-				$this->logger->info(sprintf("%s / Add to dest: %s\n", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow))));
+				$this->logger->info(sprintf("%s / Add to dest: %s", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow))));
 				try {
 					$destDBEngine->insertRow($table, $dataRow);
 				} catch (PDOException $e) {
-					printf("%s\n", $e->getMessage());
+					$this->logger->error($e->getMessage(), ['exception' => $e]);
 				}
 			}
 
@@ -85,7 +85,7 @@ class DBSyncData {
 					}
 				}
 
-				$this->logger->info(sprintf("%s / %s: %s\n", $table->name, $rowKeyHash, implode(', ', $differences)));
+				$this->logger->info(sprintf("%s / %s: %s", $table->name, $rowKeyHash, implode(', ', $differences)));
 				$keys = $table->getOnlyPrimaryKeys($row);
 
 				if(!count($updateValues)) {
