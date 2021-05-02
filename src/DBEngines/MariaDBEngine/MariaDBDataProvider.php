@@ -6,13 +6,12 @@ use Kir\DBSync\Common\Json;
 use Kir\DBSync\DBDataProvider;
 use Kir\DBSync\DBEngines\MariaDBEngine;
 use Kir\DBSync\DBTable;
-use Kir\DBSync\DBEngines\DBEngine;
 use Kir\DBSync\DBOffsetConditionBuilder;
 use Kir\MySQL\Builder\RunnableSelect;
 
 class MariaDBDataProvider implements DBDataProvider {
 	private DBOffsetConditionBuilder $offsetConditionBuilder;
-	private DBEngine $dbEngine;
+	private MariaDBEngine $dbEngine;
 
 	/**
 	 * @param MariaDBEngine $dbEngine
@@ -51,7 +50,7 @@ class MariaDBDataProvider implements DBDataProvider {
 			$resultFields["k{$key}"] = $fieldName;
 		}
 
-		$select = $this->dbEngine->getDB()->getDB()->select()
+		$select = $this->dbEngine->select()
 		->fields($fields)
 		->from('a', $tableName)
 		->limit($limit);
@@ -113,7 +112,7 @@ class MariaDBDataProvider implements DBDataProvider {
 		$hash = sprintf('MD5(JSON_OBJECT(%s))', implode(', ', $params));
 		$dbFields['v'] = $hash;
 
-		$select = $this->dbEngine->getDB()->getDB()->select()
+		$select = $this->dbEngine->select()
 		->fields($dbFields)
 		->from('a', $tableName)
 		->where(implode("\n\tOR\n", $conditionList));
@@ -157,7 +156,7 @@ class MariaDBDataProvider implements DBDataProvider {
 			$mapping["f{$idx}"] = $column->name;
 		}
 
-		$select = $this->dbEngine->getDB()->getDB()->select()
+		$select = $this->dbEngine->select()
 		->fields($fields)
 		->from('a', $table->name)
 		->where(implode("\n\tOR\n", $conditionList));
@@ -195,7 +194,7 @@ class MariaDBDataProvider implements DBDataProvider {
 	 * @return RunnableSelect
 	 */
 	private function getBaseSelectWithLowerAndUpperBound(string $tableName, array $keyFields, ?array $lowerBound = null, ?array $upperBound = null): RunnableSelect {
-		$select = $this->dbEngine->getDB()->getDB()->select()
+		$select = $this->dbEngine->select()
 		->from($tableName);
 
 		$execParams = [];
@@ -221,11 +220,11 @@ class MariaDBDataProvider implements DBDataProvider {
 	 */
 	private function buildConditionList(iterable $conditionKeySets): array {
 		$conditionList = [];
-		$db = $this->dbEngine->getDB()->getDB();
+		$db = $this->dbEngine;
 		foreach($conditionKeySets as $conditionKeys) {
 			$condition = [];
 			foreach($conditionKeys as $key => $value) {
-				$condition[] = sprintf('%s.%s=%s', $db->quoteField('a'), $db->quoteField($key), $db->quote($value));
+				$condition[] = sprintf('%s=%s', $db->quoteFieldName($key, 'a'), $db->quoteValue($value));
 			}
 			$conditionList[] = sprintf("\t(%s)", implode(' AND ', $condition));
 		}

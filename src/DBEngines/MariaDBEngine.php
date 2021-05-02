@@ -6,6 +6,7 @@ use Kir\DBSync\DBTable;
 use Kir\DBSync\PDOWrapper;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBDataProvider;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBTableProvider;
+use Kir\MySQL\Builder\RunnableSelect;
 use Kir\MySQL\Databases\MySQL;
 use PDO;
 use RuntimeException;
@@ -28,8 +29,8 @@ class MariaDBEngine implements DBEngine {
 		return $this->db->getPDO();
 	}
 
-	public function getDB(): PDOWrapper {
-		return $this->db;
+	public function select(): RunnableSelect {
+		return $this->mysql->select();
 	}
 
 	public function getTableProvider(): MariaDBTableProvider {
@@ -88,6 +89,19 @@ class MariaDBEngine implements DBEngine {
 		->addAll($row, $table->primaryKeyFields)
 		->addOrUpdateAll($row, $table->getNonPrimaryColumnNames())
 		->run();
+		return true;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function updateRow(DBTable $table, array $updateValues, array $keys) {
+		return $this->mysql->update()
+		->table($table->name)
+		->setAll($updateValues)
+		->where($keys)
+		->limit(1)
+		->run() > 0;
 	}
 
 	/**
@@ -98,6 +112,6 @@ class MariaDBEngine implements DBEngine {
 		->from($table->name)
 		->where($row)
 		->limit(1)
-		->run();
+		->run() > 0;
 	}
 }

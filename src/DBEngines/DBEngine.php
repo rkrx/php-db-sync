@@ -1,10 +1,8 @@
 <?php
 namespace Kir\DBSync\DBEngines;
 
-use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBTableProvider;
 use Kir\DBSync\DBTable;
 use Kir\DBSync\DBTableProvider;
-use Kir\DBSync\PDOWrapper;
 use Kir\DBSync\DBDataProvider;
 use PDO;
 
@@ -13,11 +11,6 @@ interface DBEngine {
 	 * @return PDO
 	 */
 	public function getPDO(): PDO;
-
-	/**
-	 * @return PDOWrapper
-	 */
-	public function getDB(): PDOWrapper;
 
 	/**
 	 * @return DBTableProvider
@@ -45,14 +38,22 @@ interface DBEngine {
 	/**
 	 * @param DBTable $table
 	 * @param array<string, null|int|float|string> $row
-	 * @return mixed
+	 * @return bool
 	 */
 	public function insertRow(DBTable $table, array $row);
 
 	/**
 	 * @param DBTable $table
+	 * @param array<string, mixed> $updateValues
+	 * @param array<string, mixed> $keys
+	 * @return bool
+	 */
+	public function updateRow(DBTable $table, array $updateValues, array $keys);
+
+	/**
+	 * @param DBTable $table
 	 * @param array<string, null|int|float|string> $row
-	 * @return mixed
+	 * @return bool
 	 */
 	public function deleteRow(DBTable $table, array $row);
 }

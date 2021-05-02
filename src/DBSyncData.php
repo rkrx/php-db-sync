@@ -72,7 +72,6 @@ class DBSyncData {
 			$destRows = iterator_to_array($destDataProvider->getKeyAndValueColumnsLazy($table, $diff));
 
 			$nonPrimaryKeyFields = $table->getNonPrimaryColumnNames();
-			$destMySQL = $destDBEngine->getDB()->getDB();
 			foreach($sourceRows as $rowKeyHash => $row) {
 				$differences = [];
 				$updateValues = [];
@@ -92,12 +91,7 @@ class DBSyncData {
 					$updateValues = $table->getOnlyNonPrimaryKeys($row);
 				}
 
-				$destMySQL->update()
-				->table($table->name)
-				->setAll($updateValues)
-				->where($keys)
-				->limit(1)
-				->run();
+				$destDBEngine->updateRow($table, $updateValues, $keys);
 			}
 			//endregion
 
