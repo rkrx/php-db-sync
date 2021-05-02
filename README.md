@@ -1,5 +1,13 @@
 # db-sync
 
+## Overview
+
+* Synchronize data from one PDO-Connection to another.
+* No changed will be made to data that is equal on both connections.
+* Every table in the database must have a primary key.
+* Detection of new or missing rows in the destination database is based in primary-keys.
+* Detection of changed rows is made by a some Hashing-Algorithm where all values of columns outside a primary key form a hash.
+
 ## Quick-Start
 
 This project was started to have a tool to quickly pull data from specific tables into a local dev database. The goal of the project is not to have some kind of command line tool to synchronize databases. For that there are tools like [pt-table-sync](https://www.percona.com/doc/percona-toolkit/LATEST/pt-table-sync.html). Is it rather meant to address more complex scenarios that could hardly be modelled by a cli-interface.
@@ -8,6 +16,8 @@ This project was started to have a tool to quickly pull data from specific table
 > This project is not intended to sync two production servers. It is meant to sync some data from a staging or production server back to local dev machines.
 >
 > Even though it is not necessary, since db-sync will not write into the source database in any circumstance, it is recommended to use a db-user on the source database, that is configured to be read-only. Just to be clear.
+> 
+> It is intended that only data gets synchronized. The table structure should be synched in the form of migration scripts and is outside the scope of this project.
 
 The most basic script for a source mariadb 10.2.3+ to a destination mariadb 10.2.3+ could look like this:
 
