@@ -1,15 +1,21 @@
 <?php
 namespace Kir\DBSync\DBEngines;
 
-use Kir\DBSync\DB;
+use Kir\DBSync\DBTable;
+use Kir\DBSync\PDOWrapper;
+use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBDataProvider;
+use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBTableProvider;
+use Kir\MySQL\Databases\MySQL;
 use PDO;
 use RuntimeException;
 
 class MariaDBEngine implements DBEngine {
-	private DB $db;
+	private PDOWrapper $db;
+	private MySQL $mysql;
 
-	public function __construct(DB $db) {
+	public function __construct(PDOWrapper $db) {
 		$this->db = $db;
+		$this->mysql = new MySQL($db->getPDO());
 		if(!version_compare($this->getVersion(), '10.2.3', '>=')) {
 			throw new RuntimeException('Min MariaDB-Version of 10.2.3 required');
 		}
@@ -19,8 +25,16 @@ class MariaDBEngine implements DBEngine {
 		return $this->db->getPDO();
 	}
 
-	public function getDB(): DB {
+	public function getDB(): PDOWrapper {
 		return $this->db;
+	}
+
+	public function getTableProvider(): MariaDBTableProvider {
+		return new MariaDBTableProvider($this->db);
+	}
+
+	public function getDataProvider(): MariaDBDataProvider {
+		return new MariaDBDataProvider($this);
 	}
 
 	/**
@@ -37,9 +51,7 @@ class MariaDBEngine implements DBEngine {
 	}
 
 	/**
-	 * @param string $fieldName
-	 * @param string|null $alias
-	 * @return string
+	 * @inheritDoc
 	 */
 	public function quoteFieldName(string $fieldName, ?string $alias = null): string {
 		if($alias !== null) {
@@ -49,8 +61,7 @@ class MariaDBEngine implements DBEngine {
 	}
 
 	/**
-	 * @param null|bool|int|float|string $value
-	 * @return string
+	 * @inheritDoc
 	 */
 	public function quoteValue($value): string {
 		if(is_null($value)) {
@@ -63,5 +74,27 @@ class MariaDBEngine implements DBEngine {
 			return (string) $value;
 		}
 		return $this->db->getPDO()->quote((string) $value);
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function insertRow(DBTable $table, array $row) {
+		$this->mysql->insert()
+		->into($table->name)
+		->addAll($row, $table->primaryKeyFields)
+		->addOrUpdateAll($row, $table->getNonPrimaryColumnNames())
+		->run();
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function deleteRow(DBTable $table, array $row) {
+		return $this->mysql->delete()
+		->from($table->name)
+		->where($row)
+		->limit(1)
+		->run();
 	}
 }

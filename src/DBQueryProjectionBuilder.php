@@ -10,6 +10,15 @@ class DBQueryProjectionBuilder {
 	 * @return DBQueryFieldSpec
 	 */
 	public static function buildQuery(array $keyFields, array $valueFields): DBQueryFieldSpec {
+		return new DBQueryFieldSpec($keyFields, $valueFields);
+	}
+
+	/**
+	 * @param array<int, string> $keyFields
+	 * @param array<int, string> $valueFields
+	 * @return DBQueryFieldSpec
+	 */
+	public static function oldBuildQuery(array $keyFields, array $valueFields): DBQueryFieldSpec {
 		$fields = [];
 		$fieldMapping = [];
 		foreach(array_values($keyFields) as $idx => $keyField) {

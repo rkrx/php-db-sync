@@ -7,10 +7,9 @@ use PDO;
 use PDOStatement;
 use RuntimeException;
 
-class DB {
+class PDOWrapper {
 	private PDO $pdo;
 	private MySQL $db;
-	private Cache $cache;
 
 	/**
 	 * @param PDO $pdo
@@ -18,7 +17,6 @@ class DB {
 	public function __construct(PDO $pdo) {
 		$this->pdo = $pdo;
 		$this->db = new MySQL($pdo);
-		$this->cache = new Cache();
 	}
 
 	/**
@@ -30,6 +28,7 @@ class DB {
 
 	/**
 	 * @return MySQL
+	 * @deprecated
 	 */
 	public function getDB(): MySQL {
 		return $this->db;

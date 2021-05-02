@@ -4,26 +4,31 @@ namespace Kir\DBSync;
 use Kir\DBSync\Common\Json;
 use Kir\DBSync\DBEngines\DBEngine;
 use PDOException;
+use Psr\Log\LoggerInterface;
 
 class DBSyncData {
+	private LoggerInterface $logger;
+
+	public function __construct(LoggerInterface $logger) {
+		$this->logger = $logger;
+	}
+
 	/**
 	 * @param DBTable $table
 	 * @param DBEngine $sourceDBEngine
 	 * @param DBEngine $destDBEngine
 	 */
-	public static function syncTwoTablesInDifferentLocations(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine): void {
+	public function syncTwoTablesInDifferentLocations(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine): void {
 		[$keyFields, $valueFields] = DBTools::getKeyAndValueFields($table);
 
-		$fieldSpec = DBQueryProjectionBuilder::buildQuery($keyFields, $valueFields);
-
-		$sourceDataProvider = new DBDataProvider($sourceDBEngine);
-		$destDataProvider = new DBDataProvider($destDBEngine);
+		$sourceDataProvider = $sourceDBEngine->getDataProvider();
+		$destDataProvider = $destDBEngine->getDataProvider();
 
 		$offset = null;
 		$limit = 1000;
 		do {
 			if($offset !== null) {
-				printf("%s / Offset: %s\n", $table->name, json_encode($offset, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+				$this->logger->info(sprintf("%s / Offset: %s\n", $table->name, json_encode($offset, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)));
 			}
 
 			$maxKey = DBTools::findNearstUpperBoundWithMaxNRows($sourceDataProvider, $destDataProvider, $table->name, $keyFields, $limit, $offset);
@@ -43,31 +48,23 @@ class DBSyncData {
 			$equalKeys = array_values(array_intersect_key($sourceCompareKeys, $destCompareKeys));
 
 			foreach($sourceMissing as $row) {
-				printf("%s / Remove from dest: %s\n", $table->name, Json::encode($row));
-				$destDBEngine->getDB()->getDB()->delete()
-				->from($table->name)
-				->where($row)
-				->limit(1)
-				->run();
+				$this->logger->info(sprintf("%s / Remove from dest: %s\n", $table->name, Json::encode($row)));
+				$destDBEngine->deleteRow($table, $row);
 			}
 
 			$dataRows = $sourceDataProvider->getKeyAndValueColumnsLazy($table, array_values($destMissing));
 			foreach($dataRows as $dataRow) {
-				printf("%s / Add to dest: %s\n", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow)));
+				$this->logger->info(sprintf("%s / Add to dest: %s\n", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow))));
 				try {
-					$destDBEngine->getDB()->getDB()->insert()
-					->into($table->name)
-					->addAll($dataRow, $table->primaryKeyFields)
-					->addOrUpdateAll($dataRow, $table->getNonPrimaryColumnNames())
-					->run();
+					$destDBEngine->insertRow($table, $dataRow);
 				} catch (PDOException $e) {
 					printf("%s\n", $e->getMessage());
 				}
 			}
 
 			//region Detect row changes
-			$aValues = $sourceDataProvider->getKeysWithHashedValues($table->name, $fieldSpec, $equalKeys);
-			$bValues = $destDataProvider->getKeysWithHashedValues($table->name, $fieldSpec, $equalKeys);
+			$aValues = $sourceDataProvider->getKeysWithHashedValues($table->name, $keyFields, $valueFields, $equalKeys);
+			$bValues = $destDataProvider->getKeysWithHashedValues($table->name, $keyFields, $valueFields, $equalKeys);
 
 			$diff = DBTools::getKeysWithDifferencesInValues($aValues, $bValues);
 
@@ -88,7 +85,7 @@ class DBSyncData {
 					}
 				}
 
-				printf("%s / %s: %s\n", $table->name, $rowKeyHash, implode(', ', $differences));
+				$this->logger->info(sprintf("%s / %s: %s\n", $table->name, $rowKeyHash, implode(', ', $differences)));
 				$keys = $table->getOnlyPrimaryKeys($row);
 
 				if(!count($updateValues)) {
