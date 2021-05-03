@@ -52,7 +52,7 @@ class MariaDBDataProvider implements DBDataProvider {
 
 		$select = $this->dbEngine->select()
 		->fields($fields)
-		->from('a', $tableName)
+		->from('a USE KEY (PRIMARY)', $tableName)
 		->limit($limit);
 
 		$execParams = [];
@@ -114,7 +114,7 @@ class MariaDBDataProvider implements DBDataProvider {
 
 		$select = $this->dbEngine->select()
 		->fields($dbFields)
-		->from('a', $tableName)
+		->from('a USE KEY (PRIMARY)', $tableName)
 		->where(implode("\n\tOR\n", $conditionList));
 
 		$select->setPreserveTypes();
@@ -158,7 +158,7 @@ class MariaDBDataProvider implements DBDataProvider {
 
 		$select = $this->dbEngine->select()
 		->fields($fields)
-		->from('a', $table->name)
+		->from('a USE KEY (PRIMARY)', $table->name)
 		->where(implode("\n\tOR\n", $conditionList));
 
 		$select->setPreserveTypes();
