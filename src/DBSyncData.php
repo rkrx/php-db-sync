@@ -17,8 +17,9 @@ class DBSyncData {
 	 * @param DBTable $table
 	 * @param DBEngine $sourceDBEngine
 	 * @param DBEngine $destDBEngine
+	 * @param null|callable(string, string, array<string, null|scalar>):bool $pkFilterFn
 	 */
-	public function syncTwoTablesFromDifferentConnections(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine): void {
+	public function syncTwoTablesFromDifferentConnections(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): void {
 		try {
 			$destDBEngine->getPDO()->exec('SET FOREIGN_KEY_CHECKS=0');
 
@@ -42,6 +43,11 @@ class DBSyncData {
 
 				$localKeys = $sourceDataProvider->getKeysInLowerAndUpperBound($table->name, $keyFields, $offset, $maxKey);
 				$remoteKeys = $destDataProvider->getKeysInLowerAndUpperBound($table->name, $keyFields, $offset, $maxKey);
+
+				if($pkFilterFn !== null) {
+					$localKeys = array_filter($localKeys, static fn(array $key) => $pkFilterFn('local', $table->name, $key));
+					$remoteKeys = array_filter($remoteKeys, static fn(array $key) => $pkFilterFn('remote', $table->name, $key));
+				}
 
 				$sourceCompareKeys = DBTools::keysToStringKeysWithOriginalKeyAsValue($localKeys);
 				$destCompareKeys = DBTools::keysToStringKeysWithOriginalKeyAsValue($remoteKeys);
