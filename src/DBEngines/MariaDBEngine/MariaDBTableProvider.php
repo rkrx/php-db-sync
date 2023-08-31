@@ -123,7 +123,7 @@ class MariaDBTableProvider implements DBTableProvider {
 	}
 
 	/**
-	 * @return string[] The field names in their original order in the primary key
+	 * @return array{TABLE_NAME?: string, COLUMN_NAME?: string} The field names in their original order in the primary key
 	 */
 	private function getPrimaryKeyFields(string $tableName): array {
 		$allPrimaryKeys = $this->cache->getOr(__FUNCTION__, function () {
@@ -211,8 +211,10 @@ class MariaDBTableProvider implements DBTableProvider {
 			}
 			return $allForeignKeys;
 		});
-		return array_map(static function (array $row) {
-			return new DBForeignKey([
+		$result = [];
+		/** @var array{constraint_schema: string, constraint_name: string, schema: string, table_name: string, column_names: string, referenced_table_schema: string, referenced_table_name: string, referenced_column_names: string} $row */
+		foreach ($allForeignKeys[$tableName] ?? [] as $row) {
+			$result[] = new DBForeignKey([
 				'schema' => $row['constraint_schema'],
 				'name' => $row['constraint_name'],
 				'tableSchema' => $row['schema'],
@@ -222,6 +224,7 @@ class MariaDBTableProvider implements DBTableProvider {
 				'primaryTableName' => $row['referenced_table_name'],
 				'primaryTableColumnNames' => explode(',', $row['referenced_column_names']),
 			]);
-		}, $allForeignKeys[$tableName] ?? []);
+		}
+		return $result;
 	}
 }

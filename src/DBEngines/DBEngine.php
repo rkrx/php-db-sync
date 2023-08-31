@@ -1,6 +1,8 @@
 <?php
 namespace Kir\DBSync\DBEngines;
 
+use Generator;
+use Kir\DBSync\Common\AbstractStatement;
 use Kir\DBSync\DBTable;
 use Kir\DBSync\DBTableProvider;
 use Kir\DBSync\DBDataProvider;
@@ -36,24 +38,34 @@ interface DBEngine {
 	public function quoteValue($value): string;
 
 	/**
+	 * @return Generator<AbstractStatement>
+	 */
+	public function setUp(): Generator;
+
+	/**
+	 * @return Generator<AbstractStatement>
+	 */
+	public function tearDown(): Generator;
+
+	/**
 	 * @param DBTable $table
 	 * @param array<string, null|int|float|string> $row
-	 * @return bool
+	 * @return string
 	 */
-	public function insertRow(DBTable $table, array $row);
+	public function makeInsertStatement(DBTable $table, array $row);
 
 	/**
 	 * @param DBTable $table
 	 * @param array<string, mixed> $updateValues
 	 * @param array<string, mixed> $keys
-	 * @return bool
+	 * @return string
 	 */
-	public function updateRow(DBTable $table, array $updateValues, array $keys);
+	public function makeUpdateStatement(DBTable $table, array $updateValues, array $keys);
 
 	/**
 	 * @param DBTable $table
 	 * @param array<string, null|int|float|string> $row
-	 * @return bool
+	 * @return string
 	 */
-	public function deleteRow(DBTable $table, array $row);
+	public function makeDeleteStatement(DBTable $table, array $row);
 }

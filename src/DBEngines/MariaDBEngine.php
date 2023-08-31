@@ -2,13 +2,16 @@
 namespace Kir\DBSync\DBEngines;
 
 use Kir\DBSync\Common\Cache;
+use Kir\DBSync\Common\ExecuteStatement;
 use Kir\DBSync\DBTable;
 use Kir\DBSync\PDOWrapper;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBDataProvider;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBTableProvider;
 use Kir\MySQL\Builder\RunnableSelect;
+use Kir\MySQL\Builder\Statement;
 use Kir\MySQL\Databases\MySQL;
 use PDO;
+use Generator;
 use RuntimeException;
 
 class MariaDBEngine implements DBEngine {
@@ -95,38 +98,86 @@ class MariaDBEngine implements DBEngine {
 		return $this->db->getPDO()->quote((string) $value);
 	}
 
-	/**
-	 * @inheritDoc
-	 */
-	public function insertRow(DBTable $table, array $row) {
-		$this->mysql->insert()
-		->into($table->name)
-		->addAll($row, $table->primaryKeyFields)
-		->addOrUpdateAll($row, $table->getNonPrimaryColumnNames())
-		->run();
-		return true;
+	public function setUp(): Generator {
+		yield new ExecuteStatement('SET FOREIGN_KEY_CHECKS=0;');
+	}
+
+	public function tearDown(): Generator {
+		yield new ExecuteStatement('SET FOREIGN_KEY_CHECKS=1;');
 	}
 
 	/**
 	 * @inheritDoc
 	 */
-	public function updateRow(DBTable $table, array $updateValues, array $keys) {
-		return $this->mysql->update()
+	public function makeInsertStatement(DBTable $table, array $row) {
+		return $this->postProcessStatement((string) $this->mysql->insert()
+		->into($table->name)
+		->addAll($row, $table->primaryKeyFields)
+		->addOrUpdateAll($row, $table->getNonPrimaryColumnNames()));
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function makeUpdateStatement(DBTable $table, array $updateValues, array $keys) {
+		return $this->postProcessStatement((string) $this->mysql->update()
 		->table($table->name)
 		->setAll($updateValues)
 		->where($keys)
-		->limit(1)
-		->run() > 0;
+		->limit(1));
 	}
 
 	/**
 	 * @inheritDoc
 	 */
-	public function deleteRow(DBTable $table, array $row) {
-		return $this->mysql->delete()
+	public function makeDeleteStatement(DBTable $table, array $row) {
+		return $this->postProcessStatement((string) $this->mysql->delete()
 		->from($table->name)
 		->where($row)
-		->limit(1)
-		->run() > 0;
+		->limit(1));
+	}
+
+	private function postProcessStatement(string $statement): string {
+		$parts = [['sql', '']];
+		$idx = 0;
+		$exitChar = null;
+		for($i = 0, $l = strlen($statement); $i < $l; $i++) {
+			if($parts[$idx][0] === 'sql' && in_array($statement[$i], ['"', '\'', '`'])) {
+				$parts[] = ['string', ''];
+				$idx = count($parts) - 1;
+				$parts[$idx][1] .= $statement[$i];
+				$exitChar = $statement[$i];
+				continue;
+			}
+
+			if($parts[$idx][0] === 'string' && $statement[$i] === '\\') {
+				$parts[$idx][1] .= $statement[$i];
+				$i++;
+				$parts[$idx][1] .= $statement[$i];
+				continue;
+			}
+
+			if($parts[$idx][0] === 'string' && $statement[$i] === $exitChar) {
+				$parts[$idx][1] .= $statement[$i];
+				$parts[] = ['sql', ''];
+				$idx = count($parts) - 1;
+				$exitChar = null;
+				continue;
+			}
+
+			$parts[$idx][1] .= $statement[$i];
+		}
+
+		$statementParts = [];
+		foreach ($parts as $part) {
+			if($part[0] === 'sql') {
+				$statementParts[] = (string) preg_replace('{\\s+}',   ' ',   $part[1]);
+			} else {
+				$statementParts[] = $part[1];
+			}
+		}
+		$statement = implode('', $statementParts);
+
+		return sprintf("%s;", rtrim($statement, " \r\n\t;"));
 	}
 }

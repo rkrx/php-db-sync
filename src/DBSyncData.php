@@ -1,9 +1,15 @@
 <?php
 namespace Kir\DBSync;
 
+use Kir\DBSync\Common\AbstractStatement;
+use Kir\DBSync\Common\DeleteStatement;
+use Kir\DBSync\Common\InsertStatement;
 use Kir\DBSync\Common\Json;
+use Kir\DBSync\Common\LogEntry;
+use Kir\DBSync\Common\UpdateStatement;
 use Kir\DBSync\DBEngines\DBEngine;
 use PDOException;
+use Generator;
 use Psr\Log\LoggerInterface;
 
 class DBSyncData {
@@ -18,11 +24,46 @@ class DBSyncData {
 	 * @param DBEngine $sourceDBEngine
 	 * @param DBEngine $destDBEngine
 	 * @param null|callable(string, string, array<string, null|scalar>):bool $pkFilterFn
+	 * @return void
 	 */
 	public function syncTwoTablesFromDifferentConnections(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): void {
-		try {
-			$destDBEngine->getPDO()->exec('SET FOREIGN_KEY_CHECKS=0');
+		$changes = $this->projectChanges($table, $sourceDBEngine, $destDBEngine, $pkFilterFn);
+		foreach ($changes as $change) {
+			if($change instanceof AbstractStatement) {
+				$destDBEngine->getPDO()->exec($change->getStatement());
+			} elseif($change instanceof LogEntry) {
+				$this->logger->info($change->getMessage());
+			}
+		}
+	}
 
+	/**
+	 * @param DBTable $table
+	 * @param DBEngine $sourceDBEngine
+	 * @param DBEngine $destDBEngine
+	 * @param null|callable(string, string, array<string, null|scalar>):bool $pkFilterFn
+	 * @return Generator<AbstractStatement>
+	 */
+	public function getSQLChanges(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): Generator {
+		$changes = $this->projectChanges($table, $sourceDBEngine, $destDBEngine, $pkFilterFn);
+		foreach ($changes as $change) {
+			if($change instanceof AbstractStatement) {
+				yield $change;
+			}
+		}
+	}
+
+	/**
+	 * @param DBTable $table
+	 * @param DBEngine $sourceDBEngine
+	 * @param DBEngine $destDBEngine
+	 * @param null|callable(string, string, array<string, null|scalar>):bool $pkFilterFn
+	 * @return Generator<AbstractStatement|LogEntry>
+	 */
+	public function projectChanges(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): Generator {
+		$setup = static fn () => yield from $destDBEngine->setUp();
+		$tearDown = static fn () => [];
+		try {
 			[$keyFields, $valueFields] = DBTools::getKeyAndValueFields($table);
 
 			$sourceDataProvider = $sourceDBEngine->getDataProvider();
@@ -32,7 +73,7 @@ class DBSyncData {
 			$limit = 1000;
 			do {
 				if($offset !== null) {
-					$this->logger->info(sprintf("%s / Offset: %s", $table->name, Json::encode($offset)));
+					yield new LogEntry(sprintf("%s / Offset: %s", $table->name, Json::encode($offset)));
 				}
 
 				$maxKey = DBTools::findNearstUpperBoundWithMaxNRows($sourceDataProvider, $destDataProvider, $table->name, $keyFields, $limit, $offset);
@@ -57,15 +98,24 @@ class DBSyncData {
 				$equalKeys = array_values(array_intersect_key($sourceCompareKeys, $destCompareKeys));
 
 				foreach($sourceMissing as $row) {
-					$this->logger->info(sprintf("%s / Remove from dest: %s", $table->name, Json::encode($row)));
-					$destDBEngine->deleteRow($table, $row);
+					yield from $setup();
+					$setup = static fn() => [];
+					$tearDown = static fn() => yield from $destDBEngine->tearDown();
+
+					yield new LogEntry(sprintf("%s / Remove from dest: %s", $table->name, Json::encode($row)));
+					yield new DeleteStatement($destDBEngine->makeDeleteStatement($table, $row));
 				}
 
+				/** @var Generator<array<string, null|int|float|string>> $dataRows */
 				$dataRows = $sourceDataProvider->getKeyAndValueColumnsLazy($table, array_values($destMissing));
 				foreach($dataRows as $dataRow) {
-					$this->logger->info(sprintf("%s / Add to dest: %s", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow))));
 					try {
-						$destDBEngine->insertRow($table, $dataRow);
+						yield from $setup();
+						$setup = static fn() => [];
+						$tearDown = static fn() => yield from $destDBEngine->tearDown();
+
+						yield new LogEntry(sprintf("%s / Add to dest: %s", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow))));
+						yield new InsertStatement($destDBEngine->makeInsertStatement($table, $dataRow));
 					} catch (PDOException $e) {
 						$this->logger->error($e->getMessage(), ['exception' => $e]);
 					}
@@ -93,21 +143,25 @@ class DBSyncData {
 						}
 					}
 
-					$this->logger->info(sprintf("%s / %s: %s", $table->name, $rowKeyHash, implode(', ', $differences)));
 					$keys = $table->getOnlyPrimaryKeys($row);
 
 					if(!count($updateValues)) {
 						$updateValues = $table->getOnlyNonPrimaryKeys($row);
 					}
 
-					$destDBEngine->updateRow($table, $updateValues, $keys);
+					yield from $setup();
+					$setup = static fn() => [];
+					$tearDown = static fn() => yield from $destDBEngine->tearDown();
+
+					yield new LogEntry(sprintf("%s / %s: %s", $table->name, $rowKeyHash, implode(', ', $differences)));
+					yield new UpdateStatement($destDBEngine->makeUpdateStatement($table, $updateValues, $keys));
 				}
 				//endregion
 
 				$offset = $maxKey;
 			} while($offset !== null);
 		} finally {
-			$destDBEngine->getPDO()->exec('SET FOREIGN_KEY_CHECKS=1');
+			yield from $tearDown();
 		}
 	}
 }

@@ -42,7 +42,7 @@ class DBColumn {
 	public ?string $expression;
 
 	/**
-	 * @param array<'name'|'position'|'defaultValue'|'isNullable'|'dataType'|'numericPrecision'|'numericScale'|'comment'|'isGenerated'|'expression', mixed> $data
+	 * @param array{name?: string, position?: int, defaultValue?: null|int|float|string, isNullable?: bool, dataType?: string, numericPrecision?: int, numericScale?: int, comment?: string|null, isGenerated?: bool, expression?: string|null} $data
 	 */
 	public function __construct(array $data = []) {
 		foreach($data as $key => $value) {

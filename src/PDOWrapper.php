@@ -60,7 +60,7 @@ class PDOWrapper {
 	 * @template T
 	 * @param string $query
 	 * @param array<string, mixed> $params
-	 * @param callable(mixed): T $fn
+	 * @param callable(null|int|float|string): T $fn
 	 * @return array<int, T>
 	 */
 	public function fetchArrayCallback(string $query, array $params, $fn) {
@@ -71,7 +71,6 @@ class PDOWrapper {
 	}
 
 	/**
-	 * @template T
 	 * @param string $query
 	 * @param array<string, mixed> $params
 	 * @return array<int, array<string, mixed>>

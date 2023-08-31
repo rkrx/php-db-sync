@@ -21,8 +21,8 @@ class DBTools {
 	}
 
 	/**
-	 * @param array<int, array<string, string>> $array
-	 * @return array<string, array<string, string>>
+	 * @param array<int, array<string, int|float|string>> $array
+	 * @return array<string, array<string, int|float|string>>
 	 */
 	public static function keysToStringKeysWithOriginalKeyAsValue(array $array): array {
 		$result = [];

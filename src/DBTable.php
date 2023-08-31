@@ -17,7 +17,7 @@ class DBTable {
 	public array $foreignKeys = [];
 
 	/**
-	 * @param array<'name'|'data'|'columns'|'primaryKeyFields'|'foreignKeys', mixed> $data
+	 * @param array{name?: string, data?: object, columns?: DBColumn[], primaryKeyFields?: string[], foreignKeys?: DBForeignKey[]} $data
 	 */
 	public function __construct(array $data = []) {
 		$this->data = (object) [];

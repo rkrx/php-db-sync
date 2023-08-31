@@ -17,7 +17,7 @@ class DBForeignKey {
 	public array $primaryTableColumnNames;
 
 	/**
-	 * @param array<'schema'|'name'|'tableSchema'|'tableName'|'columnNames'|'primaryTableSchema'|'primaryTableName'|'primaryTableColumnNames', mixed> $data
+	 * @param array{schema?: string, name?: string, tableSchema?: string, tableName?: string, columnNames?: string[], primaryTableSchema?: string, primaryTableName?: string, primaryTableColumnNames?: string[]} $data
 	 */
 	public function __construct(array $data = []) {
 		foreach($data as $key => $value) {

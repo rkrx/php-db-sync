@@ -10,7 +10,7 @@ interface DBDataProvider {
 	 * @param string[] $keyFields
 	 * @param null|array<string, int|float|string> $lowerBound
 	 * @param null|array<string, int|float|string> $upperBound
-	 * @return array<int, array<string, mixed>>
+	 * @return array<int, array<string, int|float|string>>
 	 */
 	public function getKeysInLowerAndUpperBound(string $tableName, array $keyFields, ?array $lowerBound, ?array $upperBound): array;
 

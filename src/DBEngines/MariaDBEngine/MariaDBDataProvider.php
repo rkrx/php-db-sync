@@ -72,6 +72,10 @@ class MariaDBDataProvider implements DBDataProvider {
 		if(count($rows)) {
 			$rowLastRow = $rows[count($rows) - 1];
 			$result = [];
+			/**
+			 * @var string $key
+			 * @var int|float|string $value
+			 */
 			foreach($rowLastRow as $key => $value) {
 				$result[$resultFields[$key]] = $value;
 			}
@@ -85,7 +89,7 @@ class MariaDBDataProvider implements DBDataProvider {
 	 * @param string $tableName
 	 * @param string[] $keyFields
 	 * @param string[] $valueFields
-	 * @param iterable<int, array<string, mixed>> $equalKeySets
+	 * @param iterable<int, array<string, int|float|string>> $equalKeySets
 	 * @return array<string, array{hash: string, keys: array<string, int|float|string>}>
 	 */
 	public function getKeysWithHashedValues(string $tableName, array $keyFields, array $valueFields, iterable $equalKeySets): array {
@@ -120,6 +124,7 @@ class MariaDBDataProvider implements DBDataProvider {
 		$select->setPreserveTypes();
 
 		$result = [];
+		/** @var array<string, int|float|string> $row */
 		foreach($select->fetchRows() as $row) {
 			$keyValues = [];
 			foreach($keyFields as $keyField) {
@@ -127,7 +132,7 @@ class MariaDBDataProvider implements DBDataProvider {
 			}
 			$key = Json::encode($keyValues);
 			$result[$key] = [
-				'hash' => $row['v'],
+				'hash' => (string) $row['v'],
 				'keys' => $keyValues
 			];
 		}
@@ -136,8 +141,8 @@ class MariaDBDataProvider implements DBDataProvider {
 
 	/**
 	 * @param DBTable $table
-	 * @param iterable<int, array<string, mixed>> $keySets
-	 * @return Generator<string, array<string, mixed>>
+	 * @param iterable<int, array<string, int|float|string>> $keySets
+	 * @return Generator<string, array<string, int|float|string>>
 	 */
 	public function getKeyAndValueColumnsLazy(DBTable $table, iterable $keySets): Generator {
 		$conditionList = $this->buildConditionList($keySets);
@@ -165,6 +170,10 @@ class MariaDBDataProvider implements DBDataProvider {
 
 		foreach($select->fetchRowsLazy() as $row) {
 			$resultRow = [];
+			/**
+			 * @var string $alias
+			 * @var int|float|string $value
+			 */
 			foreach($row as $alias => $value) {
 				$resultRow[$mapping[$alias]] = $value;
 			}
@@ -215,7 +224,7 @@ class MariaDBDataProvider implements DBDataProvider {
 	}
 
 	/**
-	 * @param iterable<int, array<string, mixed>> $conditionKeySets
+	 * @param iterable<int, array<string, int|float|string>> $conditionKeySets
 	 * @return array<int, string>
 	 */
 	private function buildConditionList(iterable $conditionKeySets): array {

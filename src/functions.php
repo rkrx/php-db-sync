@@ -36,7 +36,7 @@ function nullIfFalse($value) {
  * @return T
  */
 function exceptionIfNotTypeT($value, $t, Throwable $e) {
-	if(gettype($value) === $t || is_subclass_of($value, $t) || is_a($value, $t)) {
+	if((is_object($value) && (is_subclass_of($value, $t) || is_a($value, $t))) || gettype($value) === $t) {
 		return $value;
 	}
 	throw $e;
