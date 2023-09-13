@@ -8,7 +8,6 @@ use Kir\DBSync\PDOWrapper;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBDataProvider;
 use Kir\DBSync\DBEngines\MariaDBEngine\MariaDBTableProvider;
 use Kir\MySQL\Builder\RunnableSelect;
-use Kir\MySQL\Builder\Statement;
 use Kir\MySQL\Databases\MySQL;
 use PDO;
 use Generator;
