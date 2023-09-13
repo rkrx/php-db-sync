@@ -47,20 +47,29 @@ class DBTools {
 	 * @return null|array<string, int|float|string>
 	 */
 	public static function findNearstUpperBoundWithMaxNRows(DBDataProvider $firstProvider, DBDataProvider $secondProvider, string $tableName, array $keyFields, int $limit, ?array $offset): ?array {
-		$maxKey = $firstProvider->getGreatestKeyInRange($tableName, $keyFields, $limit, $offset);
-		$destCount = $secondProvider->getRowCountBetweenLowerAndUpperBound($tableName, $keyFields, $offset, $maxKey);
+		$maxKeyA = $firstProvider->getGreatestKeyInRange($tableName, $keyFields, $limit, $offset);
+		$maxKeyB = $secondProvider->getGreatestKeyInRange($tableName, $keyFields, $limit, $offset);
+
+		$maxKey = $maxKeyA ?? $maxKeyB;
+
 		$sourceCount = $firstProvider->getRowCountBetweenLowerAndUpperBound($tableName, $keyFields, $offset, $maxKey);
+		$destCount = $secondProvider->getRowCountBetweenLowerAndUpperBound($tableName, $keyFields, $offset, $maxKey);
 
 		if($sourceCount === 0 && $destCount === 0) {
 			return null;
 		}
 
+		if($sourceCount > $limit) {
+			// The object-count within the range in greater on the source side
+			return $firstProvider->getGreatestKeyInRange($tableName, $keyFields, $limit, $offset);
+		}
+
 		if($destCount > $limit) {
-			// The object-count within the range in greater on the remote side
+			// The object-count within the range in greater on the destination side
 			return $secondProvider->getGreatestKeyInRange($tableName, $keyFields, $limit, $offset);
 		}
 
-		return $maxKey;
+		return $maxKeyA ?? $maxKeyB;
 	}
 
 	/**
