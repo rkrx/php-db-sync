@@ -37,7 +37,7 @@ class DBColumn {
 	/** @var string|null COLUMN_COMMENT */
 	public ?string $comment;
 	/** @var bool IS_GENERATED */
-	public bool $isGenerated;
+	public bool $isGenerated = false;
 	/** @var string|null GENERATION_EXPRESSION */
 	public ?string $expression;
 

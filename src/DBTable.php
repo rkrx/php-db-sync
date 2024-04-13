@@ -44,8 +44,7 @@ class DBTable {
 	 * @return string[]
 	 */
 	public function getNonPrimaryColumnNames(): array {
-		$columns = array_filter($this->columns, static fn(DBColumn $col) => !$col->isGenerated);
-		$columnNames = array_map(static fn(DBColumn $col) => $col->name, $columns);
+		$columnNames = array_map(static fn(DBColumn $col) => $col->name, $this->columns);
 		return array_filter($columnNames, fn(string $name) => !in_array($name, $this->primaryKeyFields, true));
 	}
 
