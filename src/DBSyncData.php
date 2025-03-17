@@ -135,8 +135,8 @@ class DBSyncData {
 					$differences = [];
 					$updateValues = [];
 					foreach($nonPrimaryKeyFields as $valueColumnName) {
-						$oldValue = $destRows[$rowKeyHash][$valueColumnName];
-						$newValue = $row[$valueColumnName];
+						$oldValue = $destRows[$rowKeyHash][$valueColumnName] ?? null;
+						$newValue = $row[$valueColumnName] ?? null;
 						if($oldValue !== $newValue) {
 							$differences[] = sprintf('%s: %s => %s', $valueColumnName, str_truncate(Json::encode($oldValue), 32), str_truncate(Json::encode($newValue), 32));
 							$updateValues[$valueColumnName] = $newValue;
