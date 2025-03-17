@@ -11,7 +11,7 @@ class DBOffsetConditionBuilder {
 	}
 
 	/**
-	 * @param array<int, string> $keyFields
+	 * @param string[] $keyFields
 	 * @param array<string, int|float|string> $offsetData
 	 * @param array<string, mixed> $execParams
 	 * @param int $initLevel
@@ -22,7 +22,7 @@ class DBOffsetConditionBuilder {
 	}
 
 	/**
-	 * @param array<int, string> $keyFields
+	 * @param string[] $keyFields
 	 * @param array<string, int|float|string> $offsetData
 	 * @param array<string, mixed> $execParams
 	 * @param int $initLevel
@@ -33,7 +33,7 @@ class DBOffsetConditionBuilder {
 	}
 
 	/**
-	 * @param array<int, string> $keyFields
+	 * @param string[] $keyFields
 	 * @param array<string, int|float|string> $offsetData
 	 * @param string $cond
 	 * @param array<string, mixed> $execParams
@@ -44,7 +44,7 @@ class DBOffsetConditionBuilder {
 		$keyCount = count($keyFields);
 		$highestLevel = $level;
 		if($keyCount > 0) {
-			$paramKey = static fn($idx) => "p{$idx}";
+			$paramKey = static fn(int $idx) => "p{$idx}";
 			$keyField = array_shift($keyFields);
 			$quotedFieldName = $this->dbEngine->quoteFieldName($keyField);
 			$execParams[$paramKey($level)] = $offsetData[$keyField] ?? null;
@@ -59,7 +59,7 @@ class DBOffsetConditionBuilder {
 	}
 
 	/**
-	 * @param array<int, string> $keyFields
+	 * @param string[] $keyFields
 	 * @param array<string, int|float|string> $offsetData
 	 * @param string $cond
 	 * @param array<string, mixed> $execParams
@@ -69,7 +69,7 @@ class DBOffsetConditionBuilder {
 	private function buildUpperBoundRecursive(array $keyFields, array $offsetData, string $cond, array $execParams, int $level): array {
 		$keyCount = count($keyFields);
 		if($keyCount > 0) {
-			$paramKey = static fn($idx) => "p{$idx}";
+			$paramKey = static fn(int $idx) => "p{$idx}";
 			$keyField = array_shift($keyFields);
 			$quotedFieldName = $this->dbEngine->quoteFieldName($keyField);
 			$execParams[$paramKey($level)] = $offsetData[$keyField] ?? null;

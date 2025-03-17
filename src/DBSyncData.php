@@ -159,6 +159,8 @@ class DBSyncData {
 				//endregion
 
 				$offset = $maxKey;
+
+				// @phpstan-ignore-next-line
 			} while($offset !== null);
 		} finally {
 			yield from $tearDown();

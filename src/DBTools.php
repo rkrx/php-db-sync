@@ -7,7 +7,7 @@ use RuntimeException;
 class DBTools {
 	/**
 	 * @param DBTable $table
-	 * @return array{array<int, string>, array<int, string>} An array with idx0 = array of key-fields, idx 1 = array of value fields ()
+	 * @return array{string[], string[]} An array with idx0 = array of key-fields, idx 1 = array of value fields ()
 	 */
 	public static function getKeyAndValueFields(DBTable $table): array {
 		$keyFields = $table->primaryKeyFields;

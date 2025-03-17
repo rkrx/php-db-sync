@@ -48,7 +48,7 @@ class PDOWrapper {
 	/**
 	 * @param string $query
 	 * @param array<string, mixed> $params
-	 * @return array<int, mixed>
+	 * @return mixed[]
 	 */
 	public function fetchArray(string $query, array $params = []) {
 		$stmt = exceptionIfNotTypeT($this->pdo->query($query), PDOStatement::class, new RuntimeException());
@@ -61,12 +61,13 @@ class PDOWrapper {
 	 * @param string $query
 	 * @param array<string, mixed> $params
 	 * @param callable(null|int|float|string): T $fn
-	 * @return array<int, T>
+	 * @return T[]
 	 */
 	public function fetchArrayCallback(string $query, array $params, $fn) {
 		$stmt = exceptionIfNotTypeT($this->pdo->prepare($query), PDOStatement::class, new RuntimeException());
 		$stmt->execute($params);
 		$result = $this->useStmt($stmt, fn(PDOStatement $stmt) => ifFalse($stmt->fetchAll(PDO::FETCH_COLUMN), []));
+		// @phpstan-ignore-next-line
 		return array_map($fn, $result);
 	}
 
@@ -78,6 +79,7 @@ class PDOWrapper {
 	public function fetchRows(string $query, array $params = []): array {
 		$stmt = exceptionIfNotTypeT($this->pdo->prepare($query), PDOStatement::class, new RuntimeException());
 		$stmt->execute($params);
+		// @phpstan-ignore-next-line
 		return $this->useStmt($stmt, fn(PDOStatement $stmt) => ifFalse($stmt->fetchAll(PDO::FETCH_ASSOC), []));
 	}
 
@@ -91,6 +93,7 @@ class PDOWrapper {
 	public function fetchRowsCallback(string $query, array $params, $fn): array {
 		$stmt = exceptionIfNotTypeT($this->pdo->prepare($query), PDOStatement::class, new RuntimeException());
 		$stmt->execute($params);
+		// @phpstan-ignore-next-line
 		return array_map($fn, $this->useStmt($stmt, fn(PDOStatement $stmt) => ifFalse($stmt->fetchAll(PDO::FETCH_ASSOC), [])));
 	}
 

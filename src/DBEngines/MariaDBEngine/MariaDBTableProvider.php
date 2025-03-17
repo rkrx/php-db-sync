@@ -8,6 +8,20 @@ use Kir\DBSync\DBTable\DBColumn;
 use Kir\DBSync\DBTable\DBForeignKey;
 use Kir\DBSync\DBTableProvider;
 
+/**
+ * @phpstan-type TColumnShape array{
+ *     COLUMN_NAME: string,
+ *     ORDINAL_POSITION: int,
+ *     COLUMN_DEFAULT: null|int|float|string,
+ *     IS_NULLABLE: string,
+ *     DATA_TYPE: string,
+ *     NUMERIC_PRECISION: int|null,
+ *     NUMERIC_SCALE: int|null,
+ *     COLUMN_COMMENT: string,
+ *     IS_GENERATED: string|null,
+ *     GENERATION_EXPRESSION: string|null
+ * }
+ */
 class MariaDBTableProvider implements DBTableProvider {
 	private PDOWrapper $db;
 	private Cache $cache;
@@ -106,18 +120,35 @@ class MariaDBTableProvider implements DBTableProvider {
 			return $result;
 		});
 		$mappingFn = static function (array $row) {
-			return new DBColumn([
+			/** @var TColumnShape $row */
+
+			$columnDef = [
 				'name' => $row['COLUMN_NAME'],
 				'position' => $row['ORDINAL_POSITION'],
 				'defaultValue' => $row['COLUMN_DEFAULT'],
 				'isNullable' => $row['IS_NULLABLE'] !== 'NO',
 				'dataType' => $row['DATA_TYPE'],
-				'numericPrecision' => $row['NUMERIC_PRECISION'],
-				'numericScale' => $row['NUMERIC_SCALE'],
-				'comment' => $row['COLUMN_COMMENT'],
 				'isGenerated' => ($row['IS_GENERATED'] ?? '') !== 'NEVER',
 				'expression' => $row['GENERATION_EXPRESSION'] ?? null,
-			]);
+			];
+
+			if($row['NUMERIC_PRECISION']) {
+				$columnDef['numericPrecision'] = $row['NUMERIC_PRECISION'];
+			}
+
+			if($row['NUMERIC_SCALE']) {
+				$columnDef['numericScale'] = $row['NUMERIC_SCALE'];
+			}
+
+			if($row['COLUMN_COMMENT']) {
+				$columnDef['comment'] = $row['COLUMN_COMMENT'];
+			}
+
+			if($row['COLUMN_COMMENT']) {
+				$columnDef['comment'] = $row['COLUMN_COMMENT'];
+			}
+
+			return new DBColumn($columnDef);
 		};
 		return array_map($mappingFn, $allColumns[$tableName] ?? []);
 	}

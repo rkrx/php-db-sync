@@ -1,6 +1,20 @@
 <?php
 namespace Kir\DBSync\DBTable;
 
+/**
+ * @phpstan-type TColumn array{
+ *     name?: string,
+ *     position?: int,
+ *     defaultValue?: null|int|float|string,
+ *     isNullable?: bool,
+ *     dataType?: string,
+ *     numericPrecision?: int,
+ *     numericScale?: int,
+ *     comment?: string|null,
+ *     isGenerated?: bool,
+ *     expression?: string|null
+ * }
+ */
 class DBColumn {
 	/** @var string COLUMN_NAME */
 	public string $name;
@@ -42,7 +56,7 @@ class DBColumn {
 	public ?string $expression;
 
 	/**
-	 * @param array{name?: string, position?: int, defaultValue?: null|int|float|string, isNullable?: bool, dataType?: string, numericPrecision?: int, numericScale?: int, comment?: string|null, isGenerated?: bool, expression?: string|null} $data
+	 * @param TColumn $data
 	 */
 	public function __construct(array $data = []) {
 		foreach($data as $key => $value) {

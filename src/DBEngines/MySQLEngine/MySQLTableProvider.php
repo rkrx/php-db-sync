@@ -8,6 +8,19 @@ use Kir\DBSync\DBTable\DBColumn;
 use Kir\DBSync\DBTable\DBForeignKey;
 use Kir\DBSync\DBTableProvider;
 
+/**
+ * @phpstan-type TColumnShape array{
+ *     COLUMN_NAME: string,
+ *     ORDINAL_POSITION: int,
+ *     COLUMN_DEFAULT: null|int|float|string,
+ *     IS_NULLABLE: string,
+ *     DATA_TYPE: string,
+ *     NUMERIC_PRECISION: int|null,
+ *     NUMERIC_SCALE: int|null,
+ *     COLUMN_COMMENT: string,
+ *     GENERATION_EXPRESSION: string|null
+ * }
+ */
 class MySQLTableProvider implements DBTableProvider {
 	private PDOWrapper $db;
 	private Cache $cache;
@@ -105,17 +118,36 @@ class MySQLTableProvider implements DBTableProvider {
 			return $result;
 		});
 		$mappingFn = static function (array $row) {
-			return new DBColumn([
+			/** @var TColumnShape $row */
+
+			// array{name?: string, position?: int, defaultValue?: float|int|string|null, isNullable?: bool, dataType?: string, numericPrecision?: int, numericScale?: int, comment?: string|null, ...}
+			// array{name : string, position : int, defaultValue : float|int|string|null, isNullable : bool, dataType : string, numericPrecision : int|null, numericScale: int|null, comment: string, ...}
+
+			$columnDef = [
 				'name' => $row['COLUMN_NAME'],
 				'position' => $row['ORDINAL_POSITION'],
 				'defaultValue' => $row['COLUMN_DEFAULT'],
 				'isNullable' => $row['IS_NULLABLE'] !== 'NO',
 				'dataType' => $row['DATA_TYPE'],
-				'numericPrecision' => $row['NUMERIC_PRECISION'],
-				'numericScale' => $row['NUMERIC_SCALE'],
-				'comment' => $row['COLUMN_COMMENT'],
-				'expression' => $row['GENERATION_EXPRESSION'] ?? null,
-			]);
+			];
+
+			if($row['NUMERIC_PRECISION']) {
+				$columnDef['precision'] = $row['NUMERIC_PRECISION'];
+			}
+
+			if($row['NUMERIC_SCALE']) {
+				$columnDef['numericScale'] = $row['NUMERIC_SCALE'];
+			}
+
+			if($row['COLUMN_COMMENT']) {
+				$columnDef['comment'] = $row['COLUMN_COMMENT'];
+			}
+
+			if($row['GENERATION_EXPRESSION']) {
+				$columnDef['expression'] = $row['GENERATION_EXPRESSION'];
+			}
+
+			return new DBColumn($columnDef);
 		};
 		return array_map($mappingFn, $allColumns[$tableName] ?? []);
 	}

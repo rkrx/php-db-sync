@@ -65,7 +65,8 @@ class MySQLEngine implements DBEngine {
 		$versionString = (string) $this->db->fetchString('SELECT VERSION()');
 		// e.g. 8.0.36-28
 		if(preg_match('{^(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?:-\\d+)?\\b}i', $versionString, $matches)) {
-			[, $x, $y, $z] = $matches;
+			[, $x, $y] = $matches;
+			$z = $matches[3] ?? '';
 			return sprintf('%d.%d.%d', $x, $y, $z);
 		}
 		throw new RuntimeException("Was not able to parse version string: {$versionString}");
@@ -91,6 +92,7 @@ class MySQLEngine implements DBEngine {
 		if(is_bool($value)) {
 			return $value ? '1' : '0';
 		}
+		// @phpstan-ignore-next-line
 		if(is_scalar($value) && preg_match('{^(?:\\d*\\.)?\\d+$}', (string) $value)) {
 			return (string) $value;
 		}

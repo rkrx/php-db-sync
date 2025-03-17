@@ -16,7 +16,7 @@ interface DBDataProvider {
 
 	/**
 	 * @param string $tableName
-	 * @param array<int, string> $keyFields
+	 * @param string[] $keyFields
 	 * @param int $limit
 	 * @param null|array<string, int|float|string> $offset
 	 * @return null|array<string, int|float|string>
