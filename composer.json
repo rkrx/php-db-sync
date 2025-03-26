@@ -13,7 +13,7 @@
         "ext-pdo": "*",
 		"ext-json": "*",
 		"ext-mbstring": "*",
-        "rkr/php-mysql-query-builder": "0.3.*"
+        "rkr/php-mysql-query-builder": "0.3.* || 0.4.*"
     },
     "require-dev": {
         "logger/essentials": "^0.2.0",
