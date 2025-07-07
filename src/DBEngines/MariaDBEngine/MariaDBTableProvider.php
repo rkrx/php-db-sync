@@ -79,6 +79,10 @@ class MariaDBTableProvider implements DBTableProvider {
 	 */
 	public function getColumns(string $tableName): array {
 		$allColumns = $this->cache->getOr(__FUNCTION__, function () {
+			$generatorExpressions = $this->hasMinDBVersion('10.2.1');
+
+			$genExprCondition = $generatorExpressions ? "AND COALESCE(t.GENERATION_EXPRESSION, '') NOT IN ('ROW START', 'ROW END')" : '';
+
 			$query = "
 				SELECT
 					t.TABLE_NAME,
@@ -105,6 +109,7 @@ class MariaDBTableProvider implements DBTableProvider {
 					information_schema.COLUMNS t
 				WHERE
 					t.TABLE_SCHEMA = :db
+					{$genExprCondition}
 				ORDER BY
 					t.ORDINAL_POSITION
 			";
@@ -158,6 +163,11 @@ class MariaDBTableProvider implements DBTableProvider {
 	 */
 	private function getPrimaryKeyFields(string $tableName): array {
 		$allPrimaryKeys = $this->cache->getOr(__FUNCTION__, function () {
+			$temporalTables = $this->hasMinDBVersion('10.3.0');
+
+			$temporalTableJoin = $temporalTables ? "INNER JOIN information_schema.columns col ON col.table_schema = kcu.table_schema AND col.table_name = kcu.table_name AND col.column_name = kcu.column_name" : '';
+			$temporalTableCondition = $temporalTables ? "AND COALESCE(col.GENERATION_EXPRESSION, '') NOT IN ('ROW END')" : '';
+
 			$query = "
 				SELECT
 					kcu.TABLE_NAME,
@@ -166,14 +176,13 @@ class MariaDBTableProvider implements DBTableProvider {
 					information_schema.key_column_usage kcu
 				INNER JOIN
 				    information_schema.tables tab ON kcu.table_schema = tab.table_schema AND kcu.table_name = tab.table_name
+				{$temporalTableJoin}
 				WHERE
 					kcu.TABLE_SCHEMA = :db
-					AND
-					tab.TABLE_TYPE = 'BASE TABLE'
-					AND
-					ISNULL(kcu.REFERENCED_TABLE_NAME)
-					AND
-					kcu.CONSTRAINT_NAME = 'PRIMARY'
+					AND tab.TABLE_TYPE IN ('BASE TABLE', 'SYSTEM VERSIONED')
+					AND ISNULL(kcu.REFERENCED_TABLE_NAME)
+					AND kcu.CONSTRAINT_NAME = 'PRIMARY'
+					{$temporalTableCondition}
 				ORDER BY
 					kcu.ORDINAL_POSITION;
 			";
@@ -212,10 +221,8 @@ class MariaDBTableProvider implements DBTableProvider {
 					information_schema.tables tab ON kcu.table_schema = tab.table_schema AND kcu.table_name = tab.table_name
 				WHERE
 					kcu.TABLE_SCHEMA = :db
-					AND
-					tab.TABLE_TYPE = 'BASE TABLE'
-					AND
-					NOT ISNULL(kcu.REFERENCED_TABLE_NAME)
+					AND tab.TABLE_TYPE IN ('BASE TABLE', 'SYSTEM VERSIONED')
+					AND NOT ISNULL(kcu.REFERENCED_TABLE_NAME)
 				GROUP BY
 					kcu.CONSTRAINT_SCHEMA,
 					kcu.CONSTRAINT_NAME,
@@ -257,5 +264,10 @@ class MariaDBTableProvider implements DBTableProvider {
 			]);
 		}
 		return $result;
+	}
+
+	private function hasMinDBVersion(string $requiredVersion): bool {
+		$version = (string) $this->db->fetchString('SELECT VERSION()');
+		return version_compare($version, $requiredVersion, '>=');
 	}
 }
