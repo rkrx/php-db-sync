@@ -1,6 +1,8 @@
 <?php
+
 namespace Kir\DBSync;
 
+use Generator;
 use Kir\DBSync\Common\AbstractStatement;
 use Kir\DBSync\Common\DeleteStatement;
 use Kir\DBSync\Common\InsertStatement;
@@ -9,7 +11,6 @@ use Kir\DBSync\Common\LogEntry;
 use Kir\DBSync\Common\UpdateStatement;
 use Kir\DBSync\DBEngines\DBEngine;
 use PDOException;
-use Generator;
 use Psr\Log\LoggerInterface;
 
 class DBSyncData {
@@ -24,13 +25,24 @@ class DBSyncData {
 	 * @param DBEngine $sourceDBEngine
 	 * @param DBEngine $destDBEngine
 	 * @param null|callable(string, string, array<string, null|scalar>):bool $pkFilterFn
+	 * @param array{ignoreUniqueConstraintViolations?: bool} $options Additional options
 	 * @return void
 	 */
-	public function syncTwoTablesFromDifferentConnections(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): void {
+	public function syncTwoTablesFromDifferentConnections(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null, array $options = []): void {
 		$changes = $this->projectChanges($table, $sourceDBEngine, $destDBEngine, $pkFilterFn);
-		foreach ($changes as $change) {
+		foreach($changes as $change) {
 			if($change instanceof AbstractStatement) {
-				$destDBEngine->getPDO()->exec($change->getStatement());
+				try {
+					$destDBEngine->getPDO()->exec($change->getStatement());
+				} catch(PDOException $e) {
+					// Optionally ignore duplicate-key violations
+					$ignoreUniqueConstraintViolations = $options['ignoreUniqueConstraintViolations'] ?? false;
+					if($ignoreUniqueConstraintViolations && $this->isUniqueConstraintViolation($e)) {
+						$this->logger->warning(sprintf('Skipped duplicate insert on %s', $table->name));
+						continue;
+					}
+					throw $e;
+				}
 			} elseif($change instanceof LogEntry) {
 				$this->logger->info($change->getMessage());
 			}
@@ -46,7 +58,7 @@ class DBSyncData {
 	 */
 	public function getSQLChanges(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): Generator {
 		$changes = $this->projectChanges($table, $sourceDBEngine, $destDBEngine, $pkFilterFn);
-		foreach ($changes as $change) {
+		foreach($changes as $change) {
 			if($change instanceof AbstractStatement) {
 				yield $change;
 			}
@@ -61,8 +73,8 @@ class DBSyncData {
 	 * @return Generator<AbstractStatement|LogEntry>
 	 */
 	public function projectChanges(DBTable $table, DBEngine $sourceDBEngine, DBEngine $destDBEngine, $pkFilterFn = null): Generator {
-		$setup = static fn () => yield from $destDBEngine->setUp();
-		$tearDown = static fn () => [];
+		$setup = static fn() => yield from $destDBEngine->setUp();
+		$tearDown = static fn() => [];
 		try {
 			[$keyFields, $valueFields] = DBTools::getKeyAndValueFields($table);
 
@@ -116,7 +128,7 @@ class DBSyncData {
 
 						yield new LogEntry(sprintf("%s / Add to dest: %s", $table->name, Json::encode($table->getOnlyPrimaryKeys($dataRow))));
 						yield new InsertStatement($destDBEngine->makeInsertStatement($table, $dataRow));
-					} catch (PDOException $e) {
+					} catch(PDOException $e) {
 						$this->logger->error($e->getMessage(), ['exception' => $e]);
 					}
 				}
@@ -165,5 +177,20 @@ class DBSyncData {
 		} finally {
 			yield from $tearDown();
 		}
+	}
+
+	/**
+	 * Detects MySQL/MariaDB duplicate key errors (SQLSTATE 23000, driver codes like 1062/1022).
+	 */
+	private function isUniqueConstraintViolation(PDOException $e): bool {
+		$sqlState = $e->getCode();
+		$driverCode = isset($e->errorInfo[1]) ? (int) $e->errorInfo[1] : null;
+		if($sqlState === '23000' && in_array($driverCode, [1062, 1022], true)) {
+			return true;
+		}
+		// Fallback on message heuristics when driver code is unavailable
+		$msg = $e->getMessage();
+
+		return $sqlState === '23000' && (stripos($msg, 'duplicate') !== false || stripos($msg, 'unique') !== false);
 	}
 }

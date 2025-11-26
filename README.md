@@ -53,7 +53,10 @@ foreach($tables as $table) {
 	$logger->info($table->name);
 
 	try {
-		$syncData->syncTwoTablesFromDifferentConnections($table, $sourceDBEngine, $destDBEngine);
+		// Set the last flag to true to ignore duplicate-key insert errors
+		$syncData->syncTwoTablesFromDifferentConnections($table, $sourceDBEngine, $destDBEngine, null, options: [
+		    'ignoreUniqueConstraintViolations' => true
+		]);
 	} catch (PDOException $e) {
 		$logger->error($e->getMessage());
 	}
